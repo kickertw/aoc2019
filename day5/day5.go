@@ -31,52 +31,63 @@ func stringToIntArr(input string) []int {
 	return retVal
 }
 
-func findAnswer(inputs []int, userInput int) int {
+func runProgram(inputs []int, userInput int) {
 	i := 0
 	for i < len(inputs) {
 		op := inputs[i]
-		switch op {
-		case 99:
-			break
-		case 3, 4:
-			// 3 = input, 4 = output
-			if op == 3 {
-				inputs[inputs[i+1]] = userInput
-			} else {
-				fmt.Println(inputs[inputs[i+1]])
-			}
-			i += 2
-		case 1, 2:
-			operand1 := inputs[inputs[i+1]]
-			operand2 := inputs[inputs[i+2]]
-			outputIndex := inputs[i+3]
+		if op == 99 {
+			return
+		}
+		// fmt.Printf("@ Index[%v] - Opcode = %v\n", i, op)
 
-			if op == 1 {
-				inputs[outputIndex] = operand1 + operand2
-			} else if op == 2 {
-				inputs[outputIndex] = operand1 * operand2
+		opCode := op % 10
+		p1Mode := (op / 100) % 10
+		p2Mode := (op / 1000) % 10
+
+		p1 := 0
+		p2 := 0
+		if opCode < 3 {
+			p1 = inputs[i+1]
+			if p1Mode == 0 {
+				p1 = inputs[p1]
 			}
 
+			p2 = inputs[i+2]
+			if p2Mode == 0 {
+				p2 = inputs[p2]
+			}
+		}
+
+		outputIndex := inputs[i+3]
+
+		switch opCode {
+		case 1:
+			inputs[outputIndex] = p1 + p2
+			// fmt.Printf("%v + %v = %v (Stored @ %v)\n", p1, p2, inputs[outputIndex], outputIndex)
+		case 2:
+			inputs[outputIndex] = p1 * p2
+			// fmt.Printf("%v * %v = %v (Stored @ %v)\n", p1, p2, inputs[outputIndex], outputIndex)
+		case 3:
+			inputs[inputs[i+1]] = userInput
+			// fmt.Printf("input %v (Stored @ %v)\n", userInput, inputs[i+1])
+		case 4:
+			fmt.Println(inputs[inputs[i+1]])
+			// fmt.Printf("output %v (Stored @ %v)\n", inputs[inputs[i+1]], inputs[i+1])
+		}
+
+		if opCode == 1 || opCode == 2 {
 			i += 4
-		default:
-			// parameter mode
+		} else {
+			i += 2
 		}
 	}
-
-	// Part 1 answer
-	if inputs[1] == 12 && inputs[2] == 2 {
-		fmt.Printf("P1 Answer = %v\n", inputs[0])
-		return 1
-	}
-
-	return 0
 }
 
 func main() {
 
 	// Printing out file contents
 	inputfile := "day5input.txt"
-	initialInput := 1
+	userInput := 1
 
 	file, err := os.Open(inputfile)
 	if err != nil {
@@ -88,15 +99,7 @@ func main() {
 	scanner.Scan()
 	input := scanner.Text()
 
-	foundAnswers := 0
-	for noun := 0; noun < 100 && foundAnswers < 3; noun++ {
-		for verb := 0; verb < 100 && foundAnswers < 3; verb++ {
-			inputs := stringToIntArr(input)
-			inputs[1] = noun
-			inputs[2] = verb
-
-			retVal := findAnswer(inputs)
-			foundAnswers += retVal
-		}
-	}
+	inputs := stringToIntArr(input)
+	runProgram(inputs, userInput)
+	fmt.Println("Done!")
 }
