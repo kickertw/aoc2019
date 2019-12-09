@@ -23,7 +23,7 @@ func check(e error) {
 	}
 }
 
-func buildMap(m []Node, rootNode *Node, distance int) {
+func buildMap(m []Node, rootNode *Node, distance int) []Node {
 	indexesToRemove := make([]int, 0)
 
 	// Find any nodes that have "rootNodeID" as the parent.
@@ -32,7 +32,7 @@ func buildMap(m []Node, rootNode *Node, distance int) {
 		if val.parentID == rootNode.id {
 			newNode := Node{id: val.id, parentID: val.parentID, dist: distance, children: make([]Node, 0)}
 			rootNode.children = append(rootNode.children, newNode)
-			fmt.Printf("Node [%v] now has [%v] children - just added id [%v]\n", rootNode.id, len(rootNode.children), newNode.id)
+			// fmt.Printf("Node [%v] now has [%v] children - just added id [%v]\n", rootNode.id, len(rootNode.children), newNode.id)
 			indexesToRemove = append(indexesToRemove, i)
 		}
 	}
@@ -49,10 +49,30 @@ func buildMap(m []Node, rootNode *Node, distance int) {
 
 	// Recursively call each child and keep building...
 	if len(m) > 0 {
-		for ci, _ := range rootNode.children {
-			buildMap(m, &rootNode.children[ci], distance+1)
+		for ci := range rootNode.children {
+			m = buildMap(m, &rootNode.children[ci], distance+1)
 		}
 	}
+
+	return m
+}
+
+func countOrbits(node Node) int {
+
+	fmt.Printf("Node[%v] has dist [%v]\n", node.id, node.dist)
+	count := node.dist
+
+	if node.children == nil || len(node.children) == 0 {
+		fmt.Printf("	No more kids - returning %v\n", node.dist)
+		return node.dist
+	}
+
+	for _, child := range node.children {
+		count += countOrbits(child)
+	}
+
+	fmt.Printf("	Total distance from Node [%v] and below is %v\n", node.id, count)
+	return count
 }
 
 func main() {
@@ -77,6 +97,6 @@ func main() {
 	rootNode := Node{id: "COM", parentID: "", children: make([]Node, 0)}
 	buildMap(allInputs, &rootNode, 1)
 
-	fmt.Printf("RootNode has id %v and %v children\n", rootNode.id, len(rootNode.children))
-	fmt.Printf("ChildNode has id %v and %v children\n", rootNode.children[0].id, len(rootNode.children[0].children))
+	p1Total := countOrbits(rootNode)
+	fmt.Printf("Total orbits = %v", p1Total)
 }
