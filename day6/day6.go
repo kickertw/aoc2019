@@ -23,7 +23,7 @@ func check(e error) {
 	}
 }
 
-func buildMap(m []Node, rootNode Node, distance int) {
+func buildMap(m []Node, rootNode *Node, distance int) {
 	indexesToRemove := make([]int, 0)
 
 	// Find any nodes that have "rootNodeID" as the parent.
@@ -49,8 +49,8 @@ func buildMap(m []Node, rootNode Node, distance int) {
 
 	// Recursively call each child and keep building...
 	if len(m) > 0 {
-		for _, child := range rootNode.children {
-			buildMap(m, child, distance+1)
+		for ci, _ := range rootNode.children {
+			buildMap(m, &rootNode.children[ci], distance+1)
 		}
 	}
 }
@@ -75,7 +75,8 @@ func main() {
 	}
 
 	rootNode := Node{id: "COM", parentID: "", children: make([]Node, 0)}
-	buildMap(allInputs, rootNode, 1)
+	buildMap(allInputs, &rootNode, 1)
 
 	fmt.Printf("RootNode has id %v and %v children\n", rootNode.id, len(rootNode.children))
+	fmt.Printf("ChildNode has id %v and %v children\n", rootNode.children[0].id, len(rootNode.children[0].children))
 }
