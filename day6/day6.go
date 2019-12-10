@@ -41,7 +41,7 @@ func buildMap(m []Node, rootNode *Node, distance int) []Node {
 	sort.Sort(sort.Reverse(sort.IntSlice(indexesToRemove)))
 	for _, idx := range indexesToRemove {
 		if idx == len(m)-1 {
-			m = m[idx+1:]
+			m = m[:idx]
 		} else {
 			m = append(m[:idx], m[idx+1:]...)
 		}
@@ -58,12 +58,11 @@ func buildMap(m []Node, rootNode *Node, distance int) []Node {
 }
 
 func countOrbits(node Node) int {
-
-	fmt.Printf("Node[%v] has dist [%v]\n", node.id, node.dist)
+	// fmt.Printf("Node[%v] has dist [%v]\n", node.id, node.dist)
 	count := node.dist
 
 	if node.children == nil || len(node.children) == 0 {
-		fmt.Printf("	No more kids - returning %v\n", node.dist)
+		// fmt.Printf("	No more kids - returning %v\n", node.dist)
 		return node.dist
 	}
 
@@ -99,4 +98,9 @@ func main() {
 
 	p1Total := countOrbits(rootNode)
 	fmt.Printf("Total orbits = %v", p1Total)
+
+	// part 2 - TODO:
+	// Find YOU -> get a list of parents back to COM
+	// Find SAN -> get a list of parents back to COM
+	// Find the earliest common node and count
 }
