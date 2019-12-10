@@ -11,10 +11,11 @@ import (
 
 //Node - representing an object that will orbit
 type Node struct {
-	id       string
-	parentID string
-	dist     int
-	children []Node
+	id         string
+	parentID   string
+	parentNode *Node
+	dist       int
+	children   []Node
 }
 
 func check(e error) {
@@ -30,7 +31,7 @@ func buildMap(m []Node, rootNode *Node, distance int) []Node {
 	// Make the node and add it to the child array of the "rootNode"
 	for i, val := range m {
 		if val.parentID == rootNode.id {
-			newNode := Node{id: val.id, parentID: val.parentID, dist: distance, children: make([]Node, 0)}
+			newNode := Node{id: val.id, parentID: val.parentID, parentNode: rootNode, dist: distance, children: make([]Node, 0)}
 			rootNode.children = append(rootNode.children, newNode)
 			// fmt.Printf("Node [%v] now has [%v] children - just added id [%v]\n", rootNode.id, len(rootNode.children), newNode.id)
 			indexesToRemove = append(indexesToRemove, i)
@@ -70,8 +71,47 @@ func countOrbits(node Node) int {
 		count += countOrbits(child)
 	}
 
-	fmt.Printf("	Total distance from Node [%v] and below is %v\n", node.id, count)
+	//fmt.Printf("	Total distance from Node [%v] and below is %v\n", node.id, count)
 	return count
+}
+
+func findNode(root *Node, nodeID string) *Node {
+	if root.id == nodeID {
+		return root
+	}
+
+	for _, node := range root.children {
+		tempNode := findNode(&node, nodeID)
+		if tempNode != nil && tempNode.id == nodeID {
+			return tempNode
+		}
+	}
+
+	return nil
+}
+
+func getParentNodeList(node *Node) []string {
+	retVal := make([]string, 0)
+
+	tempNode := node
+	for tempNode.parentNode != nil {
+		retVal = append(retVal, tempNode.parentID)
+		tempNode = tempNode.parentNode
+	}
+
+	return retVal
+}
+
+func findMinimumTransfers(aList []string, bList []string) int {
+	for i := 0; i < len(aList); i++ {
+		for j, nodeID := range bList {
+			if nodeID == aList[i] {
+				return i + j
+			}
+		}
+	}
+
+	return 0
 }
 
 func main() {
@@ -97,10 +137,15 @@ func main() {
 	buildMap(allInputs, &rootNode, 1)
 
 	p1Total := countOrbits(rootNode)
-	fmt.Printf("Total orbits = %v", p1Total)
+	fmt.Printf("Total orbits = %v\n", p1Total)
 
 	// part 2 - TODO:
-	// Find YOU -> get a list of parents back to COM
-	// Find SAN -> get a list of parents back to COM
-	// Find the earliest common node and count
+	you := findNode(&rootNode, "YOU")
+	san := findNode(&rootNode, "SAN")
+
+	aList := getParentNodeList(you)
+	bList := getParentNodeList(san)
+
+	p2Ans := findMinimumTransfers(aList, bList)
+	fmt.Printf("P2: Minimum Transfers = %v", p2Ans)
 }
