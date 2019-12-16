@@ -12,8 +12,9 @@ import (
 //Amp - representing an amplifier
 type Amp struct {
 	id             string
+	intCode        []int
 	phaseSetting   int
-	lastOutput     int
+	currentInput   int
 	lastPointerIdx int
 }
 
@@ -43,16 +44,18 @@ func stringToIntArr(input string) []int {
 // 1st output = result
 // 2nd output = last pointer location.
 // 3rd output = Keep the program going!
-func runProgram(pointerIndex int, inputs []int, phaseSetting int, ampOutput int, isLastAmp bool) (int, int, bool) {
+func runProgram(pointerIndex int, intCode []int, phaseSetting int, currentInput int, isLastAmp bool) (int, int, bool) {
 	i := 0
 	phaseIsSet := false
+	var ampOutput int
+
 	if pointerIndex >= 0 {
 		phaseIsSet = true
 		i = pointerIndex
 	}
 
-	for i < len(inputs) {
-		op := inputs[i]
+	for i < len(intCode) {
+		op := intCode[i]
 		if op == 99 {
 			keepSwimming := true
 
@@ -60,82 +63,70 @@ func runProgram(pointerIndex int, inputs []int, phaseSetting int, ampOutput int,
 				keepSwimming = false
 			}
 
-			return ampOutput, i, keepSwimming
+			return ampOutput, -1, keepSwimming
 		}
 
 		opCode := op % 10
 		p1Mode := (op / 100) % 10
 		p2Mode := (op / 1000) % 10
 
-		p1 := inputs[i+1]
-		p2 := inputs[i+2]
+		p1 := intCode[i+1]
+		p2 := intCode[i+2]
 		outputIndex := 0
 
 		if p1Mode == 0 {
-			p1 = inputs[p1]
+			p1 = intCode[p1]
 		}
 
 		if opCode != 3 && opCode != 4 {
 			if p2Mode == 0 {
-				p2 = inputs[p2]
+				p2 = intCode[p2]
 			}
 
 			if opCode == 1 || opCode == 2 || opCode == 7 || opCode == 8 {
-				outputIndex = inputs[i+3]
+				outputIndex = intCode[i+3]
 			}
 		}
 
-		jumpIndex := 0
 		switch opCode {
 		case 1:
-			inputs[outputIndex] = p1 + p2
-			//fmt.Printf("%v + %v = %v (Stored @ %v)\n", p1, p2, inputs[outputIndex], outputIndex)
+			intCode[outputIndex] = p1 + p2
+			i += 4
 		case 2:
-			inputs[outputIndex] = p1 * p2
-			//fmt.Printf("%v * %v = %v (Stored @ %v)\n", p1, p2, inputs[outputIndex], outputIndex)
+			intCode[outputIndex] = p1 * p2
+			i += 4
 		case 3:
-			if phaseIsSet {
-				inputs[inputs[i+1]] = ampOutput
-			} else {
-				inputs[inputs[i+1]] = phaseSetting
+			if phaseIsSet && currentInput >= 0 {
+				intCode[intCode[i+1]] = currentInput
+				currentInput = -1
+			} else if !phaseIsSet {
+				intCode[intCode[i+1]] = phaseSetting
 				phaseIsSet = true
+			} else {
+				return ampOutput, i, true
 			}
-
-			//fmt.Printf("input %v (Stored @ %v)\n", inputs[inputs[i+1]], inputs[i+1])
+			i += 2
 		case 4:
 			ampOutput = p1
-			return ampOutput, i + 2, true
-			//fmt.Printf("Amp Output = %v\n", p1)
+			i += 2
 		case 5, 6:
 			if (opCode == 5 && p1 != 0) || (opCode == 6 && p1 == 0) {
-				//fmt.Print("Conditional met! - ")
-				jumpIndex = p2
+				i = p2
 			} else {
-				//fmt.Print("Conditional not met! - ")
-				jumpIndex = i + 3
+				i += 3
 			}
-			//fmt.Printf("Jumping to index %v\n", jumpIndex)
 		case 7:
-			inputs[outputIndex] = 0
+			intCode[outputIndex] = 0
 			if p1 < p2 {
-				inputs[outputIndex] = 1
+				intCode[outputIndex] = 1
 			}
-			//fmt.Printf("Setting %v @ index %v\n", inputs[outputIndex], outputIndex)
-		case 8:
-			inputs[outputIndex] = 0
-			if p1 == p2 {
-				inputs[outputIndex] = 1
-			}
-			//fmt.Printf("Setting %v @ index %v\n", inputs[outputIndex], outputIndex)
-		}
-
-		// move the instruction pointer
-		if opCode == 1 || opCode == 2 || opCode == 7 || opCode == 8 {
 			i += 4
-		} else if opCode == 3 || opCode == 4 {
-			i += 2
-		} else if opCode == 5 || opCode == 6 {
-			i = jumpIndex
+		case 8:
+			intCode[outputIndex] = 0
+			if p1 == p2 {
+				intCode[outputIndex] = 1
+			}
+			i += 4
 		}
 	}
 
@@ -184,50 +175,60 @@ func main() {
 	scanner.Scan()
 	input := scanner.Text()
 
-	inputs := stringToIntArr(input)
+	intCode := stringToIntArr(input)
 
+	var thrusterOutput int
 	winningCombo := []int{}
-	//largestOutput := 0
-	ampInput := []int{9, 8, 7, 6, 5}
-	//perms := permutations(ampInput)
+	largestOutput := 0
+	seq := []int{5, 6, 7, 8, 9}
+	perms := permutations(seq)
 
-	amplifiers := []Amp{
-		Amp{id: "A", lastOutput: 0, phaseSetting: ampInput[0], lastPointerIdx: -1},
-		Amp{id: "B", lastOutput: 0, phaseSetting: ampInput[1], lastPointerIdx: -1},
-		Amp{id: "C", lastOutput: 0, phaseSetting: ampInput[2], lastPointerIdx: -1},
-		Amp{id: "D", lastOutput: 0, phaseSetting: ampInput[3], lastPointerIdx: -1},
-		Amp{id: "E", lastOutput: 0, phaseSetting: ampInput[4], lastPointerIdx: -1},
-	}
+	for ii := 0; ii < len(perms); ii++ {
+		for jj := 0; jj < len(perms[ii]); jj++ {
+			ampOutput := 0
+			ampInput := perms[ii]
+			thrusterOutput = 0
+			amplifiers := []Amp{
+				Amp{id: "A", phaseSetting: ampInput[0], currentInput: 0, lastPointerIdx: -1},
+				Amp{id: "B", phaseSetting: ampInput[1], lastPointerIdx: -1},
+				Amp{id: "C", phaseSetting: ampInput[2], lastPointerIdx: -1},
+				Amp{id: "D", phaseSetting: ampInput[3], lastPointerIdx: -1},
+				Amp{id: "E", phaseSetting: ampInput[4], lastPointerIdx: -1},
+			}
 
-	pointerIndex := -1
-	runningAmpIdx := 0
-	nextInput := 0
-	keepSwimming := true
-	for keepSwimming {
-		fmt.Printf("Amp[%v] starting at index [%v]\n", amplifiers[runningAmpIdx].id, amplifiers[runningAmpIdx].lastPointerIdx)
-		nextInput, pointerIndex, keepSwimming = runProgram(amplifiers[runningAmpIdx].lastPointerIdx, inputs, amplifiers[runningAmpIdx].phaseSetting, nextInput, runningAmpIdx == 4)
+			for i := 0; i < len(amplifiers); i++ {
+				amplifiers[i].intCode = make([]int, len(intCode))
+				copy(amplifiers[i].intCode, intCode)
+			}
 
-		amplifiers[runningAmpIdx].lastPointerIdx = pointerIndex + 1
-		amplifiers[runningAmpIdx].lastOutput = nextInput
+			pointerIndex := -1
+			runningAmpIdx := 0
+			keepSwimming := true
+			for keepSwimming {
+				ampOutput, pointerIndex, keepSwimming = runProgram(amplifiers[runningAmpIdx].lastPointerIdx, amplifiers[runningAmpIdx].intCode, amplifiers[runningAmpIdx].phaseSetting, amplifiers[runningAmpIdx].currentInput, runningAmpIdx == 4)
+				amplifiers[runningAmpIdx].lastPointerIdx = pointerIndex
 
-		fmt.Printf("  Ran w/ output %v - stopped at %v\n", nextInput, amplifiers[runningAmpIdx].lastPointerIdx)
+				//fmt.Printf("Loop %v - Amp[%v] - input[%v] - output[%v] - ended @ index[%v]\n", loop, runningAmpIdx, amplifiers[runningAmpIdx].currentInput, ampOutput, pointerIndex)
 
-		runningAmpIdx++
-		if runningAmpIdx == 5 {
-			runningAmpIdx = 0
+				runningAmpIdx++
+				if runningAmpIdx == 5 {
+					runningAmpIdx = 0
+				}
+
+				if keepSwimming {
+					amplifiers[runningAmpIdx].currentInput = ampOutput
+				} else {
+					thrusterOutput = ampOutput
+				}
+			}
+		}
+
+		if thrusterOutput > largestOutput {
+			largestOutput = thrusterOutput
+			winningCombo = perms[ii]
+			// fmt.Printf("New Largest Output = %v / Amp Seq = %v\n", thrusterOutput, winningCombo)
 		}
 	}
-	// for ii := 0; ii < len(perms); ii++ {
-	// 	ampOutput := 0
-	// 	for jj := 0; jj < len(perms[ii]); jj++ {
-	// 		ampOutput = runProgram(inputs, perms[ii][jj], ampOutput)
-	// 	}
 
-	// 	if ampOutput > largestOutput {
-	// 		largestOutput = ampOutput
-	// 		winningCombo = perms[ii]
-	// 	}
-	// }
-
-	fmt.Printf("Largest Output = %v / Amp Seq = %v", amplifiers[4].lastOutput, winningCombo)
+	fmt.Printf("Largest Output = %v / Amp Seq = %v", largestOutput, winningCombo)
 }
