@@ -70,5 +70,22 @@ func main() {
 		}
 	}
 
-	fmt.Printf("P1 = %v", p1Answer)
+	fmt.Printf("P1 = %v\n", p1Answer)
+
+	finalImage := make([]int, maxLen)
+	for ii := 0; ii < maxLen; ii++ {
+		for jj := 0; jj < len(layers); jj++ {
+			if layers[jj][ii] < 2 {
+				finalImage[ii] = layers[jj][ii]
+				break
+			}
+		}
+	}
+
+	fmt.Println("")
+	fmt.Println("Final Image:")
+	for len(finalImage) > 0 {
+		fmt.Println(finalImage[0:layerWidth])
+		finalImage = finalImage[layerWidth:]
+	}
 }
