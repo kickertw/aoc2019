@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -14,20 +15,24 @@ func check(e error) {
 	}
 }
 
-func stringToIntArr(input string) []int {
-	s := strings.Split(input, ",")
+func createLayers(inputs []string, maxLen int) [][]int {
+	layers := [][]int{}
+	layer := make([]int, maxLen)
 
-	var retVal = []int{}
-
-	for _, i := range s {
-		j, err := strconv.Atoi(i)
-		if err != nil {
-			panic(err)
+	counter := 0
+	for _, val := range inputs {
+		layer[counter], _ = strconv.Atoi(val)
+		counter++
+		if counter == maxLen {
+			layerCopy := make([]int, maxLen)
+			copy(layerCopy, layer)
+			layers = append(layers, layerCopy)
+			counter = 0
+			layer = make([]int, maxLen)
 		}
-		retVal = append(retVal, j)
 	}
 
-	return retVal
+	return layers
 }
 
 func main() {
@@ -42,21 +47,28 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	scanner.Scan()
 	input := scanner.Text()
-	inputs := stringToIntArr(input)
+	inputs := strings.Split(input, "")
 
 	layerWidth, layerHeight := 25, 6
 	maxLen := layerWidth * layerHeight
-	layers := [][]int{}
-	layer := make([]int, maxLen)
+	layers := createLayers(inputs, maxLen)
 
-	counter := 0
-	for _, val := range inputs {
-		layer[counter] = val
-		counter++
-		if counter == maxLen {
-			layers = append(layers, layer)
-			counter = 0
+	fewestZeros := -1
+	p1Answer := 0
+	for i, layer := range layers {
+		zeroCounter := make(map[int]int)
+		for _, cellVal := range layer {
+			if cellVal == 0 || cellVal == 1 || cellVal == 2 {
+				zeroCounter[cellVal]++
+			}
+		}
+
+		if fewestZeros == -1 || zeroCounter[0] < fewestZeros {
+			p1Answer = zeroCounter[1] * zeroCounter[2]
+			fewestZeros = zeroCounter[0]
+			fmt.Printf("Layer[%v] now has fewest zeros [%v] and with [%v] ones and [%v] twos\n", i, zeroCounter[0], zeroCounter[1], zeroCounter[2])
 		}
 	}
 
+	fmt.Printf("P1 = %v", p1Answer)
 }
